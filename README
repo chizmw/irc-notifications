@@ -1,0 +1,36 @@
+IRC Notifications
+=================
+
+Inspired by a recent Ironman post about Net::AppNotifications.
+[link required]
+
+Installation
+============
+
+Get the script
+--------------
+
+ git clone git://github.com/chiselwright/irc-notifications.git
+ ln -s $PWD/irc-notifications/irc_appnotify.pl $HOME/.irssi/scripts/autorun/irc_appnotify.pl
+
+Configure the script
+--------------------
+
+ $ irssi
+ /set notify_key "YOUR_KEY_HERE"
+ /save
+
+Optionally:
+
+ /set notify_direct_only OFF
+ /set notify_regexp "(banana|apple|orange)"
+ /save
+
+Getting Your iPhone App Notification key
+----------------------------------------
+
+  Visit http://appnotifications.com/account/rest_api
+
+  Use the value in:
+
+    SINGLE_TOKEN = " ... "
