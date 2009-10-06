@@ -17,7 +17,7 @@ Irssi::settings_add_bool('irc_appnotify', 'notify_direct_only',     1);
 Irssi::settings_add_bool('irc_appnotify', 'notify_debug',           0);
 Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
 
-my $spew = Irssi::settings_get_str('notify_debug');
+my $spew = Irssi::settings_get_bool('notify_debug');
 
 # TODO factor out into other voodoo
 sub notify_iPhone {
@@ -39,9 +39,10 @@ sub notify_iPhone {
     my $notifier = Net::AppNotifications->new(key => $key);
 
     $notifier->send(
-        message    => "$msg",
-        on_success => sub { Irssi::print "Notification delivered: $msg" },
-        on_error   => sub { Irssi::print "Notification NOT delivered: $msg" },
+        title       => 'IRC Alert',
+        message     => "$msg",
+        on_success  => sub { Irssi::print "Notification delivered: $msg" },
+        on_error    => sub { Irssi::print "Notification NOT delivered: $msg" },
     );
 
     return;
