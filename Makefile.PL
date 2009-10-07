@@ -11,6 +11,7 @@ all_from 'irc_appnotify.pl';
 requires(
     #'Irssi'                 => 0,
     'Net::AppNotifications' => 0,
+	'Regexp::Common'		=> 0,
 );
 
 WriteAll;

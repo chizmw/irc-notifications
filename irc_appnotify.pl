@@ -1,9 +1,10 @@
 use Irssi qw(active_server);
 use Net::AppNotifications;
+use Regexp::Common qw /URI/;
 use strict;
 use vars qw($VERSION %IRSSI);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -22,6 +23,7 @@ my $spew = Irssi::settings_get_bool('notify_debug');
 # TODO factor out into other voodoo
 sub notify_iPhone {
     my $msg  = shift;
+	my $src  = shift;
 
     Irssi::print('notify_iPhone') if $spew;
 
@@ -37,12 +39,19 @@ sub notify_iPhone {
     }
 
     my $notifier = Net::AppNotifications->new(key => $key);
+	my $title    = (defined $src) ? "IRC Alert: $src" : "IRC Alert";
+
+	my $long_msg = $msg;
+	$long_msg =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
 
     $notifier->send(
-        title       => 'IRC Alert',
-        message     => "$msg",
-        on_success  => sub { Irssi::print "Notification delivered: $msg" },
-        on_error    => sub { Irssi::print "Notification NOT delivered: $msg" },
+        title        => $title,
+        message      => $msg,
+        long_message => $long_msg,
+		silent       => 0,
+		sound		 => 4,
+        on_success   => sub { Irssi::print "Notification delivered: $msg" },
+        on_error     => sub { Irssi::print "Notification NOT delivered: $msg" },
     );
 
     return;
@@ -51,6 +60,7 @@ sub notify_iPhone {
 # either use "notify_method" or Irssi::print
 sub send_notification {
     my $msg  = shift;
+	my $src  = shift;
 
     my $notify_func =
           q{notify_}
@@ -59,10 +69,10 @@ sub send_notification {
 
     if (__PACKAGE__->can($notify_func)) {
         no strict 'refs';
-        &${notify_func}($msg);
+        &${notify_func}($msg,$src);
     }
     else {
-        Irssi::print($msg);
+        Irssi::print($msg,$src);
     }
 }
 
@@ -93,7 +103,7 @@ sub public {
         # set the message
         $msg = qq{$target: $nick: $msg};
     }
-    send_notification($msg);
+    send_notification($msg,$target);
 }
  
 # deal with private messages
