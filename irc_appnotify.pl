@@ -42,7 +42,7 @@ sub notify_iPhone {
     }
 
     my $notifier = Net::AppNotifications->new(key => $key);
-	my $title    = (defined $src) ? "IRC Alert: $src" : "IRC Alert";
+	my $title    = (defined $src) ? "IRC: $src" : "IRC Alert";
 
 	my $long_msg = $msg;
 	$long_msg =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
@@ -115,7 +115,7 @@ sub private {
     my ($server,$msg,$nick,$address)=@_;
     #public($server,$msg,$nick,$address,$nick);
     $msg = qq{Private from $nick: $msg};
-    send_notification($msg);
+    send_notification($msg, $nick);
 }
  
 # our own public messages ... get treated like public messages
