@@ -15,17 +15,20 @@ $VERSION = '0.02';
 Irssi::settings_add_str ('irc_appnotify', 'notify_regexp',          '.+');
 Irssi::settings_add_str ('irc_appnotify', 'notify_key',             'KEY_GOES_HERE');
 Irssi::settings_add_bool('irc_appnotify', 'notify_direct_only',     1);
-Irssi::settings_add_bool('irc_appnotify', 'notify_debug',           0);
+Irssi::settings_add_int ('irc_appnotify', 'notify_debug',           0);
 Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
 
-my $spew = Irssi::settings_get_bool('notify_debug');
+sub spew {
+    my $level = shift || 1;
+    return (Irssi::settings_get_int('notify_debug') >= level);
+}
 
 # TODO factor out into other voodoo
 sub notify_iPhone {
     my $msg  = shift;
 	my $src  = shift;
 
-    Irssi::print('notify_iPhone') if $spew;
+    Irssi::print('notify_iPhone') if spew(3);
 
     my $look_for = Irssi::settings_get_str('notify_regexp');
     my $key      = Irssi::settings_get_str('notify_key');
@@ -34,7 +37,7 @@ sub notify_iPhone {
 
     if (not $msg =~ m{$look_for_re}) {
         Irssi::print "didn't match RE: $look_for_re"
-            if $spew;
+            if spew(3);
         return;
     }
 
@@ -50,7 +53,8 @@ sub notify_iPhone {
         long_message => $long_msg,
 		silent       => 0,
 		sound		 => 4,
-        on_success   => sub { Irssi::print "Notification delivered: $msg" },
+        message    => "$msg",
+        on_success => sub { Irssi::print "Notification delivered: $msg" if spew},
         on_error     => sub { Irssi::print "Notification NOT delivered: $msg" },
     );
 
@@ -80,7 +84,7 @@ sub send_notification {
 sub public {
     my ($server,$msg,$nick,$address,$target)=@_;
     Irssi::print(qq[$msg,$nick,$address,$target])
-        if $spew;
+        if spew(3);
 
     my $own_nick = active_server->{nick};
 
@@ -92,11 +96,11 @@ sub public {
     else {
         # are we only wanting direct communications?
         my $direct_only = Irssi::settings_get_bool('notify_direct_only');
-        Irssi::print $direct_only
-            if $spew;
+        Irssi::print "notify_direct_only = $direct_only"
+            if spew(3);
         if (defined $direct_only and $direct_only) {
             Irssi::print "skipping non-direct message: $msg"
-                if $spew;
+                if spew(2);
             return;
         }
 
