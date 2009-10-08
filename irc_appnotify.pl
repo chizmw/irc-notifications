@@ -20,7 +20,7 @@ Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
 
 sub spew {
     my $level = shift || 1;
-    return (Irssi::settings_get_int('notify_debug') >= level);
+    return (Irssi::settings_get_int('notify_debug') >= $level);
 }
 
 # TODO factor out into other voodoo
