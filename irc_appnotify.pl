@@ -63,6 +63,16 @@ sub notify_iPhone {
     return;
 }
 
+sub active_window_name {
+    # what's our active window?
+    my $active =
+           Irssi::active_win()->{active}{address}
+        || Irssi::active_win()->{name}
+        || Irssi::active_win()->{active}{name}
+    ;
+    return $active;
+}
+
 # either use "notify_method" or Irssi::print
 sub send_notification {
     my $msg  = shift;
@@ -70,11 +80,7 @@ sub send_notification {
     my $tgt  = shift;
 
     # what's our active window?
-    my $active =
-           Irssi::active_win()->{active}{address}
-        || Irssi::active_win()->{name}
-        || Irssi::active_win()->{active}{name}
-    ;
+    my $active = active_window_name();
 
     # are we looking where the message is destined to be?
     if ($active eq $tgt) {
