@@ -71,9 +71,9 @@ sub send_notification {
 
     # what's our active window?
     my $active =
-        defined Irssi::active_win()->{active}{address}
-        ? Irssi::active_win()->{active}{address}
-        : Irssi::active_win()->{name}
+           Irssi::active_win()->{active}{address}
+        || Irssi::active_win()->{name}
+        || Irssi::active_win()->{active}{name}
     ;
 
     # are we looking where the message is destined to be?
