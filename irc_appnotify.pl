@@ -1,10 +1,14 @@
+#!perl
+use lib '/usr/lib/perl5';
+use lib '/usr/local/share/perl/5.10.0/';
+
 use Irssi qw(active_server);
 use Net::AppNotifications;
 use Regexp::Common qw /URI/;
 use strict;
 use vars qw($VERSION %IRSSI);
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -29,6 +33,7 @@ sub spew {
 sub notify_iPhone {
     my $msg  = shift;
 	my $src  = shift;
+    my $tgt  = shift;
 
     Irssi::print('notify_iPhone') if spew(3);
 
@@ -58,6 +63,11 @@ sub notify_iPhone {
         message      => "$msg",
         on_success   => sub { Irssi::print "Notification delivered: $msg" if spew},
         on_error     => sub { Irssi::print "Notification NOT delivered: $msg" },
+
+        icon_url    => 'http://www.clker.com/cliparts/5/b/9/8/1194984513646717809chat_icon_01.svg.med.png',
+        preview     => substr($msg,0,30),
+        subtitle    => $tgt,
+
     );
 
     return;
@@ -113,7 +123,7 @@ sub send_notification {
     # do we have a function to support the desired method?
     if (__PACKAGE__->can($notify_func)) {
         no strict 'refs';
-        &${notify_func}($msg,$src);
+        &${notify_func}($msg,$src,$tgt);
     }
     else {
         Irssi::print($msg,$src);
