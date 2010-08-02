@@ -1,3 +1,10 @@
+0.05
+ - added Growl notification method (MacOS & growlnotify)
+
+0.04
+0.03
+ - bad Chisel didn't update Changes
+
 0.02
  - HTML-ify URLs in messages
  - slightly more helpful notification title

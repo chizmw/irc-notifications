@@ -8,7 +8,7 @@ use Regexp::Common qw /URI/;
 use strict;
 use vars qw($VERSION %IRSSI);
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -23,6 +23,7 @@ Irssi::settings_add_bool('irc_appnotify', 'notify_inactive_only',   1);
 Irssi::settings_add_bool('irc_appnotify', 'notify_iphone_silent',   0);
 Irssi::settings_add_int ('irc_appnotify', 'notify_debug',           0);
 Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
+Irssi::settings_add_str ('irc_appnotify', 'notify_growl',           'growlnotify');
 
 sub spew {
     my $level = shift || 1;
@@ -72,6 +73,27 @@ sub notify_iPhone {
 
     return;
 }
+ sub notify_Growl {
+    my $msg  = shift;
+	my $src  = shift;
+    my $tgt  = shift;
+    my $app  = Irssi::settings_get_str('notify_growl') || 'growlnotify';
+
+	my $title    = (defined $src) ? "IRC: $src" : "IRC Alert";
+	my $long_msg = $msg;
+	$long_msg =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
+    my $preview  = substr($msg,0,120);
+
+    my @args = (
+        $app,
+        '--name',           'irssi',
+        '--message',        $preview,
+        '--title',          "$title : $tgt",
+    );
+
+    system @args;
+    return;
+ }
 
 sub active_window_name {
     # what's our active window?
