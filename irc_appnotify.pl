@@ -1,20 +1,22 @@
 #!perl
-use lib '/usr/lib/perl5';
-use lib '/usr/local/share/perl/5.10.0/';
+#use lib '/usr/lib/perl5';
+#use lib '/usr/local/share/perl/5.10.0/';
 
 use Irssi qw(active_server);
 use Net::AppNotifications;
 use Regexp::Common qw /URI/;
+use AnyEvent::HTTP;
 use strict;
 use vars qw($VERSION %IRSSI);
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
     description => 'Alerts for IRC events via Notifications app',
     license     => 'Artistic'
 );
+
 
 Irssi::settings_add_str ('irc_appnotify', 'notify_regexp',          '.+');
 Irssi::settings_add_str ('irc_appnotify', 'notify_key',             'KEY_GOES_HERE');
@@ -23,7 +25,9 @@ Irssi::settings_add_bool('irc_appnotify', 'notify_inactive_only',   1);
 Irssi::settings_add_bool('irc_appnotify', 'notify_iphone_silent',   0);
 Irssi::settings_add_int ('irc_appnotify', 'notify_debug',           0);
 Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
+Irssi::settings_add_str ('irc_appnotify', 'notify_methods',         'iPhone,Growl');
 Irssi::settings_add_str ('irc_appnotify', 'notify_growl',           'growlnotify');
+Irssi::settings_add_str ('irc_appnotify', 'notify_proxy',           undef);
 
 sub spew {
     my $level = shift || 1;
@@ -37,6 +41,9 @@ sub notify_iPhone {
     my $tgt  = shift;
 
     Irssi::print('notify_iPhone') if spew(3);
+
+    # set the proxy (or unset, if we're undefined)
+    AnyEvent::HTTP::set_proxy(Irssi::settings_get_str('notify_proxy'));
 
     my $look_for = Irssi::settings_get_str('notify_regexp');
     my $key      = Irssi::settings_get_str('notify_key');
@@ -136,18 +143,32 @@ sub send_notification {
         }
     }
 
-    # how would the use like to be informed?
-    my $notify_func =
-          q{notify_}
-        . Irssi::settings_get_str('notify_method')
-    ;
-
-    # do we have a function to support the desired method?
-    if (__PACKAGE__->can($notify_func)) {
-        no strict 'refs';
-        &${notify_func}($msg,$src,$tgt);
+    # how would the user like to be informed?
+    # we now handle a list of methods
+    my @notify_funcs;
+    if (my $notify_list = Irssi::settings_get_str('notify_methods')) {
+        @notify_funcs = split(m{\s*,\s*}, $notify_list);
     }
     else {
+        @notify_funcs = (
+            Irssi::settings_get_str('notify_method')
+        );
+    }
+    @notify_funcs = map { q{notify_} . $_ } @notify_funcs;
+
+    my $notify_count = 0;
+
+    foreach my $notify_func (@notify_funcs) {
+        Irssi::print( "trying to call: $notify_func" )
+            if spew(3);
+        # do we have a function to support the desired method?
+        if (__PACKAGE__->can($notify_func)) {
+            $notify_count++;
+            no strict 'refs';
+            &${notify_func}($msg,$src,$tgt);
+        }
+    }
+    if (not $notify_count) {
         Irssi::print($msg,$src);
     }
 }

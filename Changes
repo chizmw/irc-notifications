@@ -1,3 +1,7 @@
+0.06
+ - (optionally) set a proxy for Net::AppNotifications
+ - add 'notify_methods' ... use more than one method to alert
+
 0.05
  - added Growl notification method (MacOS & growlnotify)
 
