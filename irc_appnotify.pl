@@ -41,6 +41,7 @@ sub message_data {
     my $msg  = shift;
 	my $src  = shift;
     my $tgt  = shift;
+    my $preview_length = shift || 80;
 
     my %data;
 
@@ -51,7 +52,7 @@ sub message_data {
 
     $data{preview}      = $msg;
 	$data{preview}      =~ s{($RE{URI}{HTTP})}{[url]}g;
-    $data{preview}      = substr($data{preview},0,30);
+    $data{preview}      = substr($data{preview},0,$preview_length);
 
     $data{subtitle}     = $tgt;
     $data{target}       = $tgt;
@@ -230,7 +231,7 @@ sub public {
 sub private {
     my ($server,$msg,$nick,$address)=@_;
     #public($server,$msg,$nick,$address,$nick);
-    $msg = qq{Private from $nick: $msg};
+    $msg = qq{$nick: $msg};
     send_notification($msg, $nick,$address);
 }
  
