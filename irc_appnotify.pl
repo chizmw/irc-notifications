@@ -93,7 +93,7 @@ sub notify_iPhone {
         long_message            => $data->{long_message},
 		silent                  => Irssi::settings_get_bool('notify_iphone_silent'),
 		sound		            => 4,
-        icon_url                => 'http://www.clker.com/cliparts/5/b/9/8/1194984513646717809chat_icon_01.svg.med.png',
+        icon_url                => 'http://chizography.net/images/chat-icon.png',
         long_message_preview    => $data->{preview},
         subtitle                => $data->{subtitle},
 
