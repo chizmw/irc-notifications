@@ -1,3 +1,9 @@
+0.07    Fri 24 Sep 2010 15:53:22 BST
+ - use icon_url and subtitle in AppNotification message
+ - factor out generation of common message elements (preview, title, subtitle, ...)
+ - HTML-ify URLs in messages
+ - general tweaks and small improvements
+
 0.06
  - (optionally) set a proxy for Net::AppNotifications
  - add 'notify_methods' ... use more than one method to alert

@@ -1,15 +1,18 @@
 #!perl
-#use lib '/usr/lib/perl5';
-#use lib '/usr/local/share/perl/5.10.0/';
+
+# HACK
+use lib q{/Users/c.wright/development/perl-net-appnotifications/lib};
 
 use Irssi qw(active_server);
-use Net::AppNotifications;
+# For 0.0.2 you'll currently need to fetch from:
+# http://github.com/chiselwright/perl-net-appnotifications/
+use Net::AppNotifications 0.02;
 use Regexp::Common qw /URI/;
 use AnyEvent::HTTP;
 use strict;
 use vars qw($VERSION %IRSSI);
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -34,6 +37,28 @@ sub spew {
     return (Irssi::settings_get_int('notify_debug') >= $level);
 }
 
+sub message_data {
+    my $msg  = shift;
+	my $src  = shift;
+    my $tgt  = shift;
+
+    my %data;
+
+	$data{title}        = (defined $src) ? "$src" : "IRC Alert";
+
+	$data{long_message} = $msg;
+	$data{long_message} =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
+
+    $data{preview}      = $msg;
+	$data{preview}      =~ s{($RE{URI}{HTTP})}{[url]}g;
+    $data{preview}      = substr($data{preview},0,30);
+
+    $data{subtitle}     = $tgt;
+    $data{target}       = $tgt;
+
+    return \%data;
+}
+
 # TODO factor out into other voodoo
 sub notify_iPhone {
     my $msg  = shift;
@@ -56,26 +81,24 @@ sub notify_iPhone {
         return;
     }
 
+    # fetch tidied up data for the notification
+    my $data = message_data($msg, $src, $tgt);
+
     my $notifier = Net::AppNotifications->new(key => $key);
-	my $title    = (defined $src) ? "IRC: $src" : "IRC Alert";
 
-	my $long_msg = $msg;
-	$long_msg =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
-
+    # http://developer.appnotifications.com/p/user_notifications.html
     $notifier->send(
-        title        => $title,
-        message      => $msg,
-        long_message => $long_msg,
-		silent       => Irssi::settings_get_bool('notify_iphone_silent'),
-		sound		 => 4,
-        message      => "$msg",
-        on_success   => sub { Irssi::print "Notification delivered: $msg" if spew},
-        on_error     => sub { Irssi::print "Notification NOT delivered: $msg" },
+        title                   => $data->{title},
+        message                 => $data->{preview},
+        long_message            => $data->{long_message},
+		silent                  => Irssi::settings_get_bool('notify_iphone_silent'),
+		sound		            => 4,
+        icon_url                => 'http://www.clker.com/cliparts/5/b/9/8/1194984513646717809chat_icon_01.svg.med.png',
+        long_message_preview    => $data->{preview},
+        subtitle                => $data->{subtitle},
 
-        icon_url    => 'http://www.clker.com/cliparts/5/b/9/8/1194984513646717809chat_icon_01.svg.med.png',
-        preview     => substr($msg,0,30),
-        subtitle    => $tgt,
-
+        on_success              => sub { Irssi::print "Notification delivered: $msg" if spew},
+        on_error                => sub { Irssi::print "Notification NOT delivered: $msg" },
     );
 
     return;
@@ -86,16 +109,16 @@ sub notify_iPhone {
     my $tgt  = shift;
     my $app  = Irssi::settings_get_str('notify_growl') || 'growlnotify';
 
-	my $title    = (defined $src) ? "IRC: $src" : "IRC Alert";
-	my $long_msg = $msg;
-	$long_msg =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
-    my $preview  = substr($msg,0,120);
+    # fetch tidied up data for the notification
+    my $data = message_data($msg, $src, $tgt);
 
+    # the arguments for growl
     my @args = (
         $app,
         '--name',           'irssi',
-        '--message',        $preview,
-        '--title',          "$title : $tgt",
+        '--message',        $data->{preview},
+        '--title',          "$data->{title} : $data->{subtitle}",
+        '--icon',           'txt',
     );
 
     system @args;
@@ -230,4 +253,5 @@ Irssi::signal_add_last('message own_public',  'own_public');
 Irssi::signal_add_last('message own_Private', 'own_private');
 
 # let the work know we're up and running
-Irssi::print "$IRSSI{name} $VERSION ready";
+Irssi::print "$IRSSI{name} $VERSION ready" if spew(1);
+Irssi::print "$IRSSI{name} : using Net::AppNotifications version $Net::AppNotifications::VERSION"   if spew(1);
