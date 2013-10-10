@@ -1,18 +1,11 @@
-#!perl
-
-# HACK
-use lib q{/Users/c.wright/development/perl-net-appnotifications/lib};
+#!/usr/bin/perl
+use strict;
 
 use Irssi qw(active_server);
-# For 0.0.2 you'll currently need to fetch from:
-# http://github.com/chiselwright/perl-net-appnotifications/
-use Net::AppNotifications 0.02;
-use Regexp::Common qw /URI/;
-use AnyEvent::HTTP;
-use strict;
-use vars qw($VERSION %IRSSI);
+use Regexp::Common;
 
-$VERSION = '0.07';
+use vars qw($VERSION %IRSSI);
+$VERSION = '0.08';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -20,17 +13,18 @@ $VERSION = '0.07';
     license     => 'Artistic'
 );
 
-
-Irssi::settings_add_str ('irc_appnotify', 'notify_regexp',          '.+');
-Irssi::settings_add_str ('irc_appnotify', 'notify_key',             'KEY_GOES_HERE');
-Irssi::settings_add_bool('irc_appnotify', 'notify_direct_only',     1);
-Irssi::settings_add_bool('irc_appnotify', 'notify_inactive_only',   1);
-Irssi::settings_add_bool('irc_appnotify', 'notify_iphone_silent',   0);
-Irssi::settings_add_int ('irc_appnotify', 'notify_debug',           0);
-Irssi::settings_add_str ('irc_appnotify', 'notify_method',          'iPhone');
-Irssi::settings_add_str ('irc_appnotify', 'notify_methods',         'iPhone,Growl');
-Irssi::settings_add_str ('irc_appnotify', 'notify_growl',           'growlnotify');
-Irssi::settings_add_str ('irc_appnotify', 'notify_proxy',           undef);
+Irssi::settings_add_str ('irc_appnotify', 'notify_regexp',                   '.+');
+Irssi::settings_add_str ('irc_appnotify', 'notify_key',                      'KEY_GOES_HERE');
+Irssi::settings_add_str ('irc_appnotify', 'notify_pushover_api_key',         'a7jf3xGZQsomggM5TtaeFL7kLfTDG2');
+Irssi::settings_add_str ('irc_appnotify', 'notify_pushover_user_key',        'KEY_GOES_HERE');
+Irssi::settings_add_bool('irc_appnotify', 'notify_direct_only',              1);
+Irssi::settings_add_bool('irc_appnotify', 'notify_inactive_only',            1);
+Irssi::settings_add_bool('irc_appnotify', 'notify_iphone_silent',            0);
+Irssi::settings_add_int ('irc_appnotify', 'notify_debug',                    0);
+Irssi::settings_add_str ('irc_appnotify', 'notify_method',                   'Pushover');
+Irssi::settings_add_str ('irc_appnotify', 'notify_methods',                  'Pushover');
+Irssi::settings_add_str ('irc_appnotify', 'notify_growl',                    'growlnotify');
+Irssi::settings_add_str ('irc_appnotify', 'notify_proxy',                    undef);
 
 sub spew {
     my $level = shift || 1;
@@ -57,11 +51,17 @@ sub message_data {
     $data{subtitle}     = $tgt;
     $data{target}       = $tgt;
 
+    # store the first URL we find, if any
+    if ($msg =~ m{($RE{URI}{HTTP})}) {
+        $data{url} = $1;
+    }
+
     return \%data;
 }
 
 # TODO factor out into other voodoo
 sub notify_iPhone {
+    return;
     my $msg  = shift;
 	my $src  = shift;
     my $tgt  = shift;
@@ -104,7 +104,64 @@ sub notify_iPhone {
 
     return;
 }
- sub notify_Growl {
+sub notify_Pushover {
+    my $msg  = shift;
+    my $src  = shift;
+    my $tgt  = shift;
+
+    # fetch tidied up data for the notification
+    my $data = message_data($msg, $src, $tgt, 300);
+
+    my $api_key  = Irssi::settings_get_str('notify_pushover_api_key') || undef;
+    my $user_key = Irssi::settings_get_str('notify_pushover_user_key') || undef;
+    my $proxy    = Irssi::settings_get_str('notify_proxy') || undef;
+
+    if (not defined $api_key or not defined $user_key) {
+        Irssi::print("pushover settings missing; set notify_pushover_api_key and notify_pushover_user_key values in your configuration [https://pushover.net/faq#overview-what]");
+        return;
+    }
+
+    use LWP::UserAgent;
+    my $lwp = LWP::UserAgent->new();
+
+    # use Charles to avoid proxy issues
+    if ($proxy) {
+        $ENV{http_proxy} = $proxy;
+        $lwp->env_proxy;
+    }
+
+    # strip the user from the message
+    # (looks crap when forwarded to the Pebble)
+    my $message = $data->{preview};
+       $message =~ s{^$src:}{};
+
+    # send the notification
+    # we could use Webservice::Pushover but LWP is more readily available
+    my $post_data = {
+        "token"       => $api_key,
+        "user"        => $user_key,
+        "message"     => $message,
+        "title"       => $data->{title},
+    };
+    if (exists $data->{url}) {
+        $post_data->{url} = $data->{url}
+    }
+    my $response = $lwp->post(
+        "http://api.pushover.net/1/messages.json",
+        [ %{$post_data} ]
+    );
+
+    # share errors
+    if ($response->is_error) {
+        Irssi::print('ERROR: notify_Pushover: ' . $response->message);
+    }
+    if (spew(2) and $response->is_success) {
+        Irssi::print('notify_Pushover: ' . $response->content);
+    }
+    return;
+}
+
+sub notify_Growl {
     my $msg  = shift;
 	my $src  = shift;
     my $tgt  = shift;
@@ -122,7 +179,7 @@ sub notify_iPhone {
         '--icon',           'txt',
     );
 
-    system @args;
+    eval { system @args; };
     return;
  }
 
@@ -208,7 +265,7 @@ sub public {
     # addressed directly
     if ($msg =~ s{\A${own_nick}:\s}{}) {
         # we've stripped the reference to us out
-        $msg = qq{$target: Direct from $nick: $msg};
+        $msg = qq{$target: [$nick] $msg};
     }
     else {
         # are we only wanting direct communications?
@@ -254,5 +311,4 @@ Irssi::signal_add_last('message own_public',  'own_public');
 Irssi::signal_add_last('message own_Private', 'own_private');
 
 # let the work know we're up and running
-Irssi::print "$IRSSI{name} $VERSION ready" if spew(1);
-Irssi::print "$IRSSI{name} : using Net::AppNotifications version $Net::AppNotifications::VERSION"   if spew(1);
+Irssi::print "$IRSSI{name} $VERSION ready";
