@@ -1,0 +1,82 @@
+# IRC Notifications
+
+Inspired by seeing a blog post about Net::AppNotifications many moons ago I
+set about getting alerts for irssi on my iPhone.
+
+This evolved, broke and adapted over the years.
+
+Now I've no longer got an iPhone, the work firewall and proxy ahve changed and
+I'm on a MacBook instead of an Ubuntu PC.
+
+Something are more portable than others...
+
+# Installation
+
+## Get the script
+
+    git clone git://github.com/chiselwright/irc-notifications.git
+    ln -s $PWD/irc-notifications/irc_appnotify.pl $HOME/.irssi/scripts/autorun/irc_appnotify.pl
+
+## Configure the script
+
+Follow the instructions for the plugin(s) below that you're interested in
+using.
+
+### Multiple notification methods
+
+Set up the services you're interested in and set the ```notify_methods``` as a
+comma-separated list of the methods you're interested in:
+
+    /set notify_methods Pushover,Growl
+
+### Optionally
+
+    /set notify_direct_only OFF
+    /set notify_regexp "(banana|apple|orange)"
+    /save
+
+# Notification Methods
+
+## growlnotify
+
+    /set notify_growl growlnotify
+    /set notify_methods Growl
+    /save
+
+## PushOver
+
+    /set notify_pushover_api_key a7jf3xGZQsomggM5TtaeFL7kLfTDG2
+    /set notify_pushover_user_key YOUR_USER_KEY
+    /set notify_methods Pushover
+    /save
+
+## iPhone / Net::AppNotifications
+
+*NO LONGER SUPPORTED*
+
+# Setting a proxy
+
+If you need to use a proxy:
+
+    /set notify_proxy http://localhost:8888
+
+# API Keys
+
+## Getting your PushOver key
+
+* Get and install PushOver
+* Once you have an account, visit your dashboard at L<https://pushover.net/>
+* Use the user key displayed on that page.
+
+    /set notify_pushover_api_key a7jf3xGZQsomggM5TtaeFL7kLfTDG2
+    /set notify_pushover_user_key YOUR_USER_KEY
+    /set notify_methods Pushover
+    /save
+
+## Getting Your iPhone App Notification key
+
+  Visit http://appnotifications.com/account/rest_api
+
+  Use the value in:
+
+    SINGLE_TOKEN = " ... "
