@@ -13,7 +13,7 @@ author 'Chisel <chisel at chizography.net>';
 #    egrep -rh '^use ' lib/ |sort |uniq
 requires(
     #'Irssi'                 => 0,
-    'Net::AppNotifications' => 0,
+    #'Net::AppNotifications' => 0,
 	'Regexp::Common'		=> 0,
 );
 
