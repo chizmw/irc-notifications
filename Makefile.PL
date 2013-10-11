@@ -14,6 +14,7 @@ author 'Chisel <chisel at chizography.net>';
 requires(
     #'Irssi'                 => 0,
     #'Net::AppNotifications' => 0,
+    'LWP::UserAgent'        => 0,
 	'Regexp::Common'		=> 0,
 );
 
