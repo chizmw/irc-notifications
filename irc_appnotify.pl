@@ -5,7 +5,7 @@ use Irssi qw(active_server);
 use Regexp::Common;
 
 use vars qw($VERSION %IRSSI);
-$VERSION = '0.08';
+$VERSION = '0.09';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
@@ -15,6 +15,7 @@ $VERSION = '0.08';
 
 Irssi::settings_add_str ('irc_appnotify', 'notify_regexp',                   '.+');
 Irssi::settings_add_str ('irc_appnotify', 'notify_key',                      'KEY_GOES_HERE');
+Irssi::settings_add_str ('irc_appnotify', 'notify_pushbullet_access_token',  'KEY_GOES_HERE');
 Irssi::settings_add_str ('irc_appnotify', 'notify_pushover_api_key',         'a7jf3xGZQsomggM5TtaeFL7kLfTDG2');
 Irssi::settings_add_str ('irc_appnotify', 'notify_pushover_user_key',        'KEY_GOES_HERE');
 Irssi::settings_add_bool('irc_appnotify', 'notify_direct_only',              1);
@@ -22,7 +23,7 @@ Irssi::settings_add_bool('irc_appnotify', 'notify_inactive_only',            1);
 Irssi::settings_add_bool('irc_appnotify', 'notify_iphone_silent',            0);
 Irssi::settings_add_int ('irc_appnotify', 'notify_debug',                    0);
 Irssi::settings_add_str ('irc_appnotify', 'notify_method',                   'Pushover');
-Irssi::settings_add_str ('irc_appnotify', 'notify_methods',                  'Pushover');
+Irssi::settings_add_str ('irc_appnotify', 'notify_methods',                  'Pushover,Pushbullet');
 Irssi::settings_add_str ('irc_appnotify', 'notify_growl',                    'growlnotify');
 Irssi::settings_add_str ('irc_appnotify', 'notify_proxy',                    undef);
 
@@ -104,6 +105,68 @@ sub notify_iPhone {
 
     return;
 }
+
+sub notify_Pushbullet {
+    my $msg  = shift;
+    my $src  = shift;
+    my $tgt  = shift;
+
+    my $user_key = Irssi::settings_get_str('notify_pushbullet_access_token') || undef;
+    my $proxy    = Irssi::settings_get_str('notify_proxy') || undef;
+
+    if (not defined $user_key || $user_key eq 'KEY_GOES_HERE') {
+        Irssi::print("pushbullet settings missing; set notify_pushbullet_access_token [https://www.pushbullet.com/account]");
+        return;
+    }
+
+    use LWP::UserAgent;
+    my $lwp = LWP::UserAgent->new();
+
+    # use Charles to avoid proxy issues
+    if ($proxy) {
+        $ENV{http_proxy} = $proxy;
+        $lwp->env_proxy;
+    }
+
+    # tidy the message a bit
+    my $data = message_data($msg, $src, $tgt, 300);
+
+    # strip the user from the message
+    # (looks crap when forwarded to the Pebble)
+    my $message = $data->{preview};
+       $message =~ s{^$src:}{};
+
+    my $post_data = {
+        type    => 'note',
+        title   => $data->{title},
+        body    => $message,
+    };
+
+    if (exists $data->{url}) {
+        $post_data->{url}  = $data->{url};
+        $post_data->{type} = 'link';
+    }
+
+    $lwp->credentials(
+        "api.pushbullet.com:443", "Pushbullet",
+        $user_key, undef);
+
+    my $response = $lwp->post(
+        "https://api.pushbullet.com/v2/pushes",
+        [ %{$post_data} ]
+    );
+
+    # share errors
+    if ($response->is_error) {
+        Irssi::print('notify_Pushbullet: ' . $response->content);
+        Irssi::print('ERROR: notify_Pushbullet: ' . $response->message);
+    }
+    if (spew(2) and $response->is_success) {
+        Irssi::print('notify_Pushbullet: ' . $response->content);
+    }
+    return;
+}
+
 sub notify_Pushover {
     my $msg  = shift;
     my $src  = shift;
