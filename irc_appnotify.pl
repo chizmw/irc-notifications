@@ -147,12 +147,13 @@ sub notify_Pushover {
         $post_data->{url} = $data->{url}
     }
     my $response = $lwp->post(
-        "http://api.pushover.net/1/messages.json",
+        "https://api.pushover.net/1/messages.json",
         [ %{$post_data} ]
     );
 
     # share errors
     if ($response->is_error) {
+        Irssi::print('notify_Pushover: ' . $response->content);
         Irssi::print('ERROR: notify_Pushover: ' . $response->message);
     }
     if (spew(2) and $response->is_success) {
