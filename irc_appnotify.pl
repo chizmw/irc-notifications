@@ -5,11 +5,11 @@ use Irssi qw(active_server);
 use Regexp::Common;
 
 use vars qw($VERSION %IRSSI);
-$VERSION = '0.09';
+$VERSION = '0.10';
 %IRSSI = (
     authors     => 'Chisel Wright',
     name        => 'irc_appnotify',
-    description => 'Alerts for IRC events via Notifications app',
+    description => 'Alerts for IRC events via various notification apps/methods',
     license     => 'Artistic'
 );
 
@@ -38,22 +38,26 @@ sub message_data {
     my $tgt  = shift;
     my $preview_length = shift || 80;
 
+    my $URI_RE = $RE{URI}{HTTP}{-scheme => qr(https?)};
+
     my %data;
 
 	$data{title}        = (defined $src) ? "$src" : "IRC Alert";
 
+    $data{original_message} = $msg;
+
 	$data{long_message} = $msg;
-	$data{long_message} =~ s{($RE{URI}{HTTP})}{<a href="$1">$1</a>}g;
+	$data{long_message} =~ s{($URI_RE)}{<a href="$1">$1</a>}g;
 
     $data{preview}      = $msg;
-	$data{preview}      =~ s{($RE{URI}{HTTP})}{[url]}g;
+	$data{preview}      =~ s{($URI_RE)}{[url]}g;
     $data{preview}      = substr($data{preview},0,$preview_length);
 
     $data{subtitle}     = $tgt;
     $data{target}       = $tgt;
 
     # store the first URL we find, if any
-    if ($msg =~ m{($RE{URI}{HTTP})}) {
+    if ($msg =~ m{($URI_RE)}) {
         $data{url} = $1;
     }
 
@@ -133,7 +137,7 @@ sub notify_Pushbullet {
 
     # strip the user from the message
     # (looks crap when forwarded to the Pebble)
-    my $message = $data->{preview};
+    my $message = $data->{original_message};
        $message =~ s{^$src:}{};
 
     my $post_data = {
